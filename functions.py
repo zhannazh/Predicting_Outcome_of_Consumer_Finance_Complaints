@@ -5,6 +5,11 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
+from sklearn import metrics
+from sklearn.metrics import confusion_matrix
+
+from sklearn.metrics import confusion_matrix, roc_auc_score
+
 
 def add_value_labels(ax, spacing=5):
     """Add labels to the end of each bar in a bar chart.
@@ -136,3 +141,63 @@ def feature_importance(clf, df):
 
     return sorted(d.items(), key=lambda x: x[1], reverse=True)
     
+
+def auc_and_logloss(train_resid, valid_resid, train_Y, valid_Y):
+    """This function calculates AUC (on valid) and log-loss (on train and valid) """
+    auc_and_logloss = {}
+
+    auc = roc_auc_score(valid_Y, valid_resid) 
+    logloss_train = metrics.log_loss(train_Y, train_resid)
+    logloss_valid = metrics.log_loss(valid_Y, valid_resid)
+    auc_and_logloss['AUC'] = format(auc, '.6f')
+    auc_and_logloss['logloss_train'] = format(logloss_train, ',.6f')
+    auc_and_logloss['logloss_valid'] = format(logloss_valid, ',.6f')
+
+    return auc_and_logloss
+
+def store_AUC_and_logloss_results(model, model_text, df_train, df_valid, to_drop, auc_and_logloss_results):
+    train_resid = model.predict(df_train.drop(to_drop, axis=1))
+    valid_resid = model.predict(df_valid.drop(to_drop, axis=1))
+    auc_and_logloss_results[model_text] = auc_and_logloss(train_resid, valid_resid, df_train['Y'], df_valid['Y'])
+    return auc_and_logloss_results
+
+
+def fpr_and_fnr(valid_Y, valid_resid, threshold):
+    """This function calculates % of false positives and false negatives"""
+    
+    tn, fp, fn, tp = confusion_matrix(valid_Y, (valid_resid>=threshold).astype(int)).ravel()
+    fpr_and_fnr = {}
+    tpr = tp/(tp+fn)
+    fnr = fn/(tp+fn)
+    tnr = tn/(tn+fp)
+    fpr = fp/(tn+fp)
+    #print('false positive rate - Pr(predict relief when none) - ', format(fpr, '.3f'))
+    #print('false negative rate - Pr(predict no $ when compensation granted) - ', format(fnr, '.3f' ))
+    fpr_and_fnr['fpr'] = format(fpr, '.3f')
+    fpr_and_fnr['fnr'] = format(fnr, '.3f')
+    return fpr_and_fnr
+
+def store_fpr_and_fnr_results(model, model_text, df_valid, to_drop, threshold, fpr_and_fnr_results):
+    valid_predicted_proba = model.predict(df_valid.drop(to_drop, axis=1))
+    fpr_and_fnr_results[model_text] = fpr_and_fnr(df_valid['Y'], valid_predicted_proba, threshold)
+    return fpr_and_fnr_results
+    
+
+def actual_and_predicted_values(model, df, to_drop):
+    Y_and_Y_hat = pd.concat([df['Y'], model.predict(df.drop(to_drop, axis=1))], axis=1)
+    Y_and_Y_hat = Y_and_Y_hat.rename(columns={0:'Y_hat'})
+    return Y_and_Y_hat
+
+def predicted_proba_histograms_by_Y(Y_and_Y_hat):
+    """This function plots Histograms of Predicted Probabilities when Y=1 and Y=1"""
+    # Y=1  
+    plt.hist(Y_and_Y_hat[Y_and_Y_hat.Y==1].Y_hat)
+    plt.title('Histogram of Predicted Probabilities when Y=1')
+    plt.xticks([i/10 for i in range(0,11)])
+    plt.show()
+
+    # Y=0
+    plt.hist(Y_and_Y_hat[Y_and_Y_hat.Y==0].Y_hat)
+    plt.title('Histogram of Predicted Probabilities when Y=0')
+    plt.xticks([i/10 for i in range(0,11)])
+    plt.show()   
