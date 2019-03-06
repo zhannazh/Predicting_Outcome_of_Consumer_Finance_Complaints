@@ -77,7 +77,7 @@ def fraction_of_outcomes_with_monetary_relief(df,var):
 def bar_chart_Y_by_categories_of_variable(df,var, title):
     fig, ax = plt.subplots(figsize=(12, 8))
     plt.title(title, size=18)
-    plt.bar(df.index, df['mean(Y)'])
+    plt.bar(df.index, df['mean(Y)'], color = 'orange')
     plt.xticks(df.index, df[var], rotation=90)
     plt.yticks(np.arange(10*(df['mean(Y)'].max()+.1))/10)
     plt.ylabel("Fraction with Monetary Relief", size=12)
@@ -90,3 +90,49 @@ def create_dummies(df, var, prefix, excluded_category):
     f = f.drop([excluded_category], axis=1)
     df = pd.concat([df, f], axis=1)
     return df    
+
+
+def process_zipcodes(f):
+
+    # Remove empty space from variable ZIP code
+    f["ZIP code"] = f["ZIP code"].str.strip()
+
+    print("Length of the zip code in the dataset")
+    print(f["ZIP code"].str.len().value_counts())
+    print()
+    
+    print("Number of non-alphanumeric characters: ")
+    print(f[f["ZIP code"].str.isalnum()==False].shape[0])
+    print()
+
+    print('Alpha characters in the zip code:')
+    print(f["ZIP code"].str.extract('([A-Z])')[0].value_counts())
+    print()
+
+    print('Number of null values: ', f['ZIP code'].isna().sum())
+    
+    return f
+
+
+def feature_importance(clf, df):
+
+    """ This function produces a bar chart of feature importance and gives a list of 
+    ranked features / variables """
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    width = 1
+    plt.title('Feature Importance', size=18)
+    ax.bar(np.arange(len(df.drop('Y',axis=1).columns)), clf.feature_importances_, width, 
+           color='r', edgecolor='k')
+    ax.set_xticks(np.arange(len(clf.feature_importances_)))
+    ax.set_xticklabels(df.drop('Y',axis=1).columns.values, rotation = 90, size=15)
+    ax.set_ylabel("Feature's Information Gain", size=14)
+    plt.show()
+
+    d = {}
+    for i in range(len(df.drop('Y',axis=1).columns)):
+        d[df.drop('Y',axis=1).columns[i]]=format(clf.feature_importances_[i], '.3f')
+    print('Features by Importance (Information gain or decrease in entropy)')
+
+    return sorted(d.items(), key=lambda x: x[1], reverse=True)
+    
