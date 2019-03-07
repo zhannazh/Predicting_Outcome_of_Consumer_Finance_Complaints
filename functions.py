@@ -155,9 +155,19 @@ def auc_and_logloss(train_resid, valid_resid, train_Y, valid_Y):
 
     return auc_and_logloss
 
-def store_AUC_and_logloss_results(model, model_text, df_train, df_valid, to_drop, auc_and_logloss_results):
-    train_resid = model.predict(df_train.drop(to_drop, axis=1))
-    valid_resid = model.predict(df_valid.drop(to_drop, axis=1))
+
+def residuals_sklearn(model, df, to_drop):
+    resid = model.predict_proba(df.drop(to_drop, axis=1))
+    return np.hsplit(resid, 2)[1]
+
+
+def store_AUC_and_logloss_results(model, model_text, sklearn, df_train, df_valid, to_drop, auc_and_logloss_results):
+    if sklearn is False:
+        train_resid = model.predict(df_train.drop(to_drop, axis=1))
+        valid_resid = model.predict(df_valid.drop(to_drop, axis=1))
+    elif sklearn is True:
+        train_resid = residuals_sklearn(model, df_train, to_drop)
+        valid_resid = residuals_sklearn(model, df_valid, to_drop)
     auc_and_logloss_results[model_text] = auc_and_logloss(train_resid, valid_resid, df_train['Y'], df_valid['Y'])
     return auc_and_logloss_results
 
