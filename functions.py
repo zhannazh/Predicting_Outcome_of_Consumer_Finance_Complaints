@@ -142,13 +142,13 @@ def feature_importance(clf, df):
     return sorted(d.items(), key=lambda x: x[1], reverse=True)
     
 
-def auc_and_logloss(train_resid, valid_resid, train_Y, valid_Y):
+def auc_and_logloss(train_predictions, valid_predictions, train_Y, valid_Y):
     """This function calculates AUC (on valid) and log-loss (on train and valid) """
     auc_and_logloss = {}
 
-    auc = roc_auc_score(valid_Y, valid_resid) 
-    logloss_train = metrics.log_loss(train_Y, train_resid)
-    logloss_valid = metrics.log_loss(valid_Y, valid_resid)
+    auc = roc_auc_score(valid_Y, valid_predictions) 
+    logloss_train = metrics.log_loss(train_Y, train_predictions)
+    logloss_valid = metrics.log_loss(valid_Y, valid_predictions)
     auc_and_logloss['AUC'] = format(auc, '.6f')
     auc_and_logloss['logloss_train'] = format(logloss_train, ',.6f')
     auc_and_logloss['logloss_valid'] = format(logloss_valid, ',.6f')
@@ -156,26 +156,26 @@ def auc_and_logloss(train_resid, valid_resid, train_Y, valid_Y):
     return auc_and_logloss
 
 
-def residuals_sklearn(model, df, to_drop):
-    resid = model.predict_proba(df.drop(to_drop, axis=1))
-    return np.hsplit(resid, 2)[1]
+def predictions_sklearn(model, df, to_drop):
+    Y_hat = model.predict_proba(df.drop(to_drop, axis=1))
+    return np.hsplit(Y_hat, 2)[1]
 
 
 def store_AUC_and_logloss_results(model, model_text, sklearn, df_train, df_valid, to_drop, auc_and_logloss_results):
     if sklearn is False:
-        train_resid = model.predict(df_train.drop(to_drop, axis=1))
-        valid_resid = model.predict(df_valid.drop(to_drop, axis=1))
+        train_predictions = model.predict(df_train.drop(to_drop, axis=1))
+        valid_predictions = model.predict(df_valid.drop(to_drop, axis=1))
     elif sklearn is True:
-        train_resid = residuals_sklearn(model, df_train, to_drop)
-        valid_resid = residuals_sklearn(model, df_valid, to_drop)
-    auc_and_logloss_results[model_text] = auc_and_logloss(train_resid, valid_resid, df_train['Y'], df_valid['Y'])
+        train_predictions = predictions_sklearn(model, df_train, to_drop)
+        valid_predictions  = predictions_sklearn(model, df_valid, to_drop)
+    auc_and_logloss_results[model_text] = auc_and_logloss(train_predictions, valid_predictions, df_train['Y'], df_valid['Y'])
     return auc_and_logloss_results
 
 
-def fpr_and_fnr(valid_Y, valid_resid, threshold):
+def fpr_and_fnr(valid_Y, valid_predictions, threshold):
     """This function calculates % of false positives and false negatives"""
     
-    tn, fp, fn, tp = confusion_matrix(valid_Y, (valid_resid>=threshold).astype(int)).ravel()
+    tn, fp, fn, tp = confusion_matrix(valid_Y, (valid_predictions>=threshold).astype(int)).ravel()
     fpr_and_fnr = {}
     tpr = tp/(tp+fn)
     fnr = fn/(tp+fn)
@@ -187,9 +187,12 @@ def fpr_and_fnr(valid_Y, valid_resid, threshold):
     fpr_and_fnr['fnr'] = format(fnr, '.3f')
     return fpr_and_fnr
 
-def store_fpr_and_fnr_results(model, model_text, df_valid, to_drop, threshold, fpr_and_fnr_results):
-    valid_predicted_proba = model.predict(df_valid.drop(to_drop, axis=1))
-    fpr_and_fnr_results[model_text] = fpr_and_fnr(df_valid['Y'], valid_predicted_proba, threshold)
+def store_fpr_and_fnr_results(model, model_text, sklearn, df_valid, to_drop, threshold, fpr_and_fnr_results):
+    if sklearn is False:
+        valid_predictions = model.predict(df_valid.drop(to_drop, axis=1))
+    elif sklearn is True:
+        valid_predictions = predictions_sklearn(model, df_valid, to_drop)
+    fpr_and_fnr_results[model_text] = fpr_and_fnr(df_valid['Y'], valid_predictions, threshold)
     return fpr_and_fnr_results
     
 
