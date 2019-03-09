@@ -187,6 +187,16 @@ def fpr_and_fnr(valid_Y, valid_predictions, threshold):
     fpr_and_fnr['fnr'] = format(fnr, '.3f')
     return fpr_and_fnr
 
+def actual_and_predicted_values(model, df, sklearn, to_drop):
+    if sklearn is False:
+        Y_and_Y_hat = pd.concat([df['Y'], model.predict(df.drop(to_drop, axis=1))], axis=1)
+    elif sklearn is True:
+        Y = pd.DataFrame(df['Y']).reset_index()
+        Y_hat = pd.DataFrame(predictions_sklearn(model, df, to_drop))
+        Y_and_Y_hat = pd.concat([Y, Y_hat], axis=1)
+    Y_and_Y_hat = Y_and_Y_hat.rename(columns={0:'Y_hat'})
+    return Y_and_Y_hat
+
 def store_fpr_and_fnr_results(model, model_text, sklearn, df_valid, to_drop, threshold, fpr_and_fnr_results):
     if sklearn is False:
         valid_predictions = model.predict(df_valid.drop(to_drop, axis=1))
@@ -195,11 +205,6 @@ def store_fpr_and_fnr_results(model, model_text, sklearn, df_valid, to_drop, thr
     fpr_and_fnr_results[model_text] = fpr_and_fnr(df_valid['Y'], valid_predictions, threshold)
     return fpr_and_fnr_results
     
-
-def actual_and_predicted_values(model, df, to_drop):
-    Y_and_Y_hat = pd.concat([df['Y'], model.predict(df.drop(to_drop, axis=1))], axis=1)
-    Y_and_Y_hat = Y_and_Y_hat.rename(columns={0:'Y_hat'})
-    return Y_and_Y_hat
 
 def predicted_proba_histograms_by_Y(Y_and_Y_hat):
     """This function plots Histograms of Predicted Probabilities when Y=1 and Y=1"""
