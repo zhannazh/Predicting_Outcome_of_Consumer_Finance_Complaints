@@ -1,6 +1,7 @@
 
 import numpy as np
 import pandas as pd
+import re
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -219,3 +220,34 @@ def predicted_proba_histograms_by_Y(Y_and_Y_hat):
     plt.title('Histogram of Predicted Probabilities when Y=0')
     plt.xticks([i/10 for i in range(0,11)])
     plt.show()   
+
+def count_zero_coefficients(model, df_valid, to_drop):
+    count_issues = 0
+    count_companies = 0
+    count_states = 0
+    count_zip = 0
+
+    for counter, coefficient in enumerate(model.coef_[0]):
+        if coefficient == 0 and re.search("^Company_", df_valid.drop(to_drop, axis=1).columns[counter]):
+            count_companies = count_companies+1
+        elif coefficient == 0 and re.search("^Issue_", df_valid.drop(to_drop, axis=1).columns[counter]):
+            count_issues = count_issues+1
+        elif coefficient == 0 and re.search("^State_", df_valid.drop(to_drop, axis=1).columns[counter]):
+            count_states = count_states+1        
+        elif coefficient == 0 and re.search("^ZIP_", df_valid.drop(to_drop, axis=1).columns[counter]):
+            count_zip = count_zip+1
+    print('# of Issue dummies with zero coefficient: ', count_issues)
+    print('# of Company dummies with zero coefficient: ', count_companies)
+    print('# of State dummies with zero coefficient: ', count_states)
+    print('# of Zip code dummies with zero coefficient: ', count_zip)
+
+def display_nonzero_coefficients(model,df_valid, to_drop):
+
+    non_zero_coeff = {}
+    for counter, coefficient in enumerate(model.coef_[0]):
+        if coefficient != 0:
+            non_zero_coeff[df_valid.drop(to_drop, axis=1).columns[counter]] = coefficient
+
+    return pd.DataFrame.from_dict(non_zero_coeff, orient = 'index').sort_values(by=0, ascending=False)
+
+            
